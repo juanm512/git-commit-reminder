@@ -1,78 +1,133 @@
-import * as vscode from 'vscode';
+import * as vscode from "vscode";
+import { exec } from "node:child_process";
+
+let timer: NodeJS.Timeout | undefined;
 
 export function activate(context: vscode.ExtensionContext) {
+	const startReminder = vscode.commands.registerCommand(
+		"extension.startGitReminder",
+		() => {
+			const intervalMinutes = getConfiguredInterval();
+			const interval = intervalMinutes * 60 * 1000; // Convert minutes to milliseconds
 
-	// Simple notifications
-	const showInfoNotification = vscode.commands.registerCommand('notifications-sample.showInfo', () => {
-		vscode.window.showInformationMessage('Info Notification');
-	});
+			if (timer) {
+				clearInterval(timer);
+			}
 
-	const showInfoNotificationAsModal = vscode.commands.registerCommand('notifications-sample.showInfoAsModal', () => {
-		vscode.window.showInformationMessage('Info Notification As Modal', { modal: true });
-	});
+			timer = setInterval(() => {
+				checkGitStatus();
+			}, interval);
 
-	const showWarningNotification = vscode.commands.registerCommand('notifications-sample.showWarning', () => {
-		vscode.window.showWarningMessage('Warning Notification');
-	});
+			vscode.window.showInformationMessage(
+				`Git commit reminder started! Interval: ${intervalMinutes} minutes`,
+			);
+		},
+	);
 
-	const showErrorNotification = vscode.commands.registerCommand('notifications-sample.showError', () => {
-		vscode.window.showErrorMessage('Error Notification');
-	});
+	const stopReminder = vscode.commands.registerCommand(
+		"extension.stopGitReminder",
+		() => {
+			if (timer) {
+				clearInterval(timer);
+				timer = undefined;
+				vscode.window.showInformationMessage("Git commit reminder stopped.");
+			}
+		},
+	);
 
-	// Notification with actions
-	const showWarningNotificationWithActions = vscode.commands.registerCommand('notifications-sample.showWarningWithActions', async () => {
-		const selection = await vscode.window.showWarningMessage('Warning Notification With Actions', 'Action 1', 'Action 2', 'Action 3');
-		
-		if (selection !== undefined) {
-			vscode.window.showInformationMessage(`You selected: ${selection}`, { modal: true });
+	const updateInterval = vscode.commands.registerCommand(
+		"extension.updateGitReminderInterval",
+		async () => {
+			const result = await vscode.window.showInputBox({
+				prompt: "Enter new reminder interval (in minutes)",
+				validateInput: (value) => {
+					const num = Number.parseInt(value);
+					return Number.isNaN(num) || num <= 0
+						? "Please enter a positive number"
+						: null;
+				},
+			});
+
+			if (result) {
+				const newInterval = Number.parseInt(result);
+				const config = vscode.workspace.getConfiguration("gitReminder");
+				await config.update(
+					"reminderInterval",
+					newInterval,
+					vscode.ConfigurationTarget.Global,
+				);
+
+				vscode.window.showInformationMessage(
+					`Git commit reminder interval updated to ${newInterval} minutes`,
+				);
+
+				// Restart the timer with the new interval
+				vscode.commands.executeCommand("extension.startGitReminder");
+			}
+		},
+	);
+
+	context.subscriptions.push(startReminder, stopReminder, updateInterval);
+}
+
+export function deactivate() {
+	if (timer) {
+		clearInterval(timer);
+	}
+}
+
+function getConfiguredInterval(): number {
+	const config = vscode.workspace.getConfiguration("gitReminder");
+	return config.get("reminderInterval", 30);
+}
+
+function checkGitStatus() {
+	const rootPath = vscode.workspace.workspaceFolders?.[0].uri.fsPath;
+
+	if (!rootPath) {
+		return;
+	}
+
+	exec("git status --porcelain", { cwd: rootPath }, (error, stdout, stderr) => {
+		if (error) {
+			console.error(`Error: ${error.message}`);
+			return;
 		}
-		
+		if (stderr) {
+			console.error(`stderr: ${stderr}`);
+			return;
+		}
+		if (stdout) {
+			showCommitReminder();
+		}
 	});
+}
 
-	// Progress notification with option to cancel
-	const showProgressNotification = vscode.commands.registerCommand('notifications-sample.showProgress', () => {
-		vscode.window.withProgress({
-			location: vscode.ProgressLocation.Notification,
-			title: "Progress Notification",
-			cancellable: true
-		}, (progress, token) => {
-			token.onCancellationRequested(() => {
-				console.log("User canceled the long running operation");
-			});
+async function showCommitReminder() {
+	const selection = await vscode.window.showWarningMessage(
+		"You have uncommitted changes. Consider making a commit!",
+		"Commit now",
+		"Remind me later",
+		"Stop reminders",
+	);
 
-			progress.report({ increment: 0 });
-
-			setTimeout(() => {
-				progress.report({ increment: 10, message: "Still going..." });
-			}, 1000);
-
-			setTimeout(() => {
-				progress.report({ increment: 40, message: "Still going even more..." });
-			}, 2000);
-
-			setTimeout(() => {
-				progress.report({ increment: 50, message: "I am long running! - almost there..." });
-			}, 3000);
-
-			const p = new Promise<void>(resolve => {
-				setTimeout(() => {
-					resolve();
-				}, 5000);
-			});
-
-			return p;
-		});
-	});
-
-	// Show all notifications to show do not disturb behavior
-	const showAllNotifications = vscode.commands.registerCommand('notifications-sample.showAll', () => {
-		vscode.commands.executeCommand('notifications-sample.showInfo');
-		vscode.commands.executeCommand('notifications-sample.showWarning');
-		vscode.commands.executeCommand('notifications-sample.showWarningWithActions');
-		vscode.commands.executeCommand('notifications-sample.showError');
-		vscode.commands.executeCommand('notifications-sample.showProgress');
-		vscode.commands.executeCommand('notifications-sample.showInfoAsModal');
-	});
-
-	context.subscriptions.push(showInfoNotification, showInfoNotificationAsModal, showWarningNotification, showErrorNotification, showProgressNotification, showWarningNotificationWithActions, showAllNotifications);
+	switch (selection) {
+		case "Commit now": {
+			const gitExtension = vscode.extensions.getExtension("vscode.git");
+			if (gitExtension?.isActive) {
+				// If the Git extension is active, focus on the Source Control view
+				await vscode.commands.executeCommand("workbench.view.scm");
+			} else {
+				// If the Git extension is not active, use the default git.commit command
+				await vscode.commands.executeCommand("git.commit");
+			}
+			break;
+		}
+		case "Remind me later":
+			// Do nothing, the timer will trigger again later
+			break;
+		case "Stop reminders":
+			vscode.commands.executeCommand("extension.stopGitReminder");
+			break;
+	}
 }
