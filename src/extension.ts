@@ -4,6 +4,8 @@ import { exec } from "node:child_process";
 let timer: NodeJS.Timeout | undefined;
 
 export function activate(context: vscode.ExtensionContext) {
+	console.log("Git Commit Reminder is now active!");
+
 	const startReminder = vscode.commands.registerCommand(
 		"extension.startGitReminder",
 		() => {
@@ -23,6 +25,10 @@ export function activate(context: vscode.ExtensionContext) {
 			);
 		},
 	);
+
+	if (getAutoStart()) {
+		vscode.commands.executeCommand("extension.startGitReminder");
+	}
 
 	const stopReminder = vscode.commands.registerCommand(
 		"extension.stopGitReminder",
@@ -67,7 +73,39 @@ export function activate(context: vscode.ExtensionContext) {
 		},
 	);
 
-	context.subscriptions.push(startReminder, stopReminder, updateInterval);
+	const updateAutoStart = vscode.commands.registerCommand(
+		"extension.updateAutoStart",
+		async () => {
+			const newAutoStart = await vscode.window.showInformationMessage(
+				"Do you want to automatically start the Git commit reminder when VS Code launches?",
+				"Yes",
+				"No",
+			);
+
+			if (newAutoStart === "Yes") {
+				const config = vscode.workspace.getConfiguration("gitReminder");
+				await config.update(
+					"autoStart",
+					true,
+					vscode.ConfigurationTarget.Global,
+				);
+			} else {
+				const config = vscode.workspace.getConfiguration("gitReminder");
+				await config.update(
+					"autoStart",
+					false,
+					vscode.ConfigurationTarget.Global,
+				);
+			}
+		},
+	);
+
+	context.subscriptions.push(
+		startReminder,
+		stopReminder,
+		updateInterval,
+		updateAutoStart,
+	);
 }
 
 export function deactivate() {
@@ -79,6 +117,11 @@ export function deactivate() {
 function getConfiguredInterval(): number {
 	const config = vscode.workspace.getConfiguration("gitReminder");
 	return config.get("reminderInterval", 30);
+}
+
+function getAutoStart(): boolean {
+	const config = vscode.workspace.getConfiguration("gitReminder");
+	return config.get("autoStart", true);
 }
 
 function checkGitStatus() {

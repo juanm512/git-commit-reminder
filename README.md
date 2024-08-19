@@ -1,44 +1,24 @@
-# Notifications Sample
+# Git Commit Reminder
+This extension reminds you to commit your changes periodically.
 
-This sample showcases a handful of basic configurations for notifications in VS Code:
-- Info Notification
-- Info Notification as Modal
-- Warning Notification
-- Warning Notification with Actions
-- Progress Notification
+---
+## Features
+- Shows a reminder notification when there are uncommitted changes
+- Configurable reminder interval
+- Stops reminders when you commit
 
-Read the [Notifications UX Guidelines](https://code.visualstudio.com/api/ux-guidelines/notifications) to learn how to effectively use notifications in an extension.
+---
+### Commands
+- `Git Commit Reminder: Start Git Commit Reminder`: Starts the Git commit reminder
+- `Git Commit Reminder: Stop Git Commit Reminder`: Stops the Git commit reminder
+- `Git Commit Reminder: Update Git Commit Reminder Interval`: Updates the reminder interval
+- `Git Commit Reminder: Update Git Commit Reminder Auto Start`: Updates the auto start setting
 
-## Demo
+---
+### Settings
+- `gitReminder.reminderInterval`: The reminder interval in minutes (default: 30)
+- `gitReminder.autoStart`: Whether to automatically start the Git commit reminder when VS Code launches (default: true)
 
-![demo](demo.gif)
-
-## VS Code API
-
-### `vscode` module
-
-- [`commands.registerCommand`](https://code.visualstudio.com/api/references/vscode-api#commands.registerCommand)
-- [`window.showInformationMessage`](https://code.visualstudio.com/api/references/vscode-api#window.showInformationMessage)
-- [`window.showWarningMessage`](https://code.visualstudio.com/api/references/vscode-api#window.showWarningMessage)
-- [`window.showErrorMessage`](https://code.visualstudio.com/api/references/vscode-api#window.showErrorMessage)
-- [`window.withProgress`](https://code.visualstudio.com/api/references/vscode-api#window.withProgress)
-
-### Contribution Points
-
-- [`contributes.commands`](https://code.visualstudio.com/api/references/contribution-points#contributes.commands)
-
-## Running the Sample
-
-- Run `npm install` in terminal to install dependencies
-- Press F5 or Run the `Run Extension` target in the Debug View. This will:
-	- Start a task `npm: watch` to compile the code
-	- Run the extension in a new VS Code window
-- Try running the commands to show the notifications:
-
-```
-- Notifications Sample: Show Info Notification
-- Notifications Sample: Show Info Notification as Modal
-- Notifications Sample: Show Warning Notification
-- Notifications Sample: Show Warning Notification with Actions
-- Notifications Sample: Show Progress Notification
-```
+---
+## Contributing
+Contributions are welcome!
