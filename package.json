@@ -8,6 +8,7 @@
 		"type": "git",
 		"url": "https://github.com/juanm512/git-commit-reminder"
 	},
+	"icon": "icon.webp",
 	"engines": {
 		"vscode": "^1.60.0"
 	},
