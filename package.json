@@ -1,6 +1,6 @@
 {
-	"name": "git-commit-reminder",
-	"displayName": "Git Commit Reminder",
+	"name": "remind-me-to-commit",
+	"displayName": "Remind me to commit!",
 	"description": "Reminds you to commit your changes periodically",
 	"version": "0.0.1",
 	"publisher": "juuanmav",
